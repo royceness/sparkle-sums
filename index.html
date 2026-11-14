@@ -190,6 +190,16 @@ button{font:inherit;color:inherit;border:0;cursor:pointer;touch-action:manipulat
 @keyframes giant{0%{transform:scale(0) rotate(-30deg);opacity:0}35%{transform:scale(1.1) rotate(8deg);opacity:.95}70%{transform:scale(1) rotate(-4deg);opacity:.9}100%{transform:scale(1.6);opacity:0}}
 .flash{position:fixed;inset:0;pointer-events:none;z-index:18;background:linear-gradient(120deg,var(--r1),var(--r2),var(--r3),var(--r4),var(--r5),var(--r6));animation:flash .9s ease-out both}
 @keyframes flash{0%{opacity:0}30%{opacity:.32}100%{opacity:0}}
+.guard{position:fixed;inset:0;z-index:60;background:rgba(20,10,40,.6);display:flex;align-items:center;justify-content:center;padding:16px}
+.guard[hidden]{display:none}
+.gbox{background:#fff;color:#2b2140;border-radius:24px;padding:22px;width:min(440px,100%);font-weight:700}
+.gbox h3{margin:0 0 8px;font-size:24px}
+.gbox label{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0;font-size:18px}
+.gbox input{width:6.5em;font:inherit;font-size:20px;padding:.35em .5em;border:2px solid #b9aed0;border-radius:12px;text-align:center;user-select:text;-webkit-user-select:text}
+#gerr{color:#c2134a;min-height:1.4em;margin:0}
+.grow{display:flex;gap:12px;justify-content:flex-end;margin-top:8px}
+.grow button{border-radius:99px;padding:.6em 1.2em;font-size:17px;background:#ece8f4;color:#2b2140}
+.grow #gok{background:#c2134a;color:#fff}
 </style>
 </head>
 <body>
@@ -246,6 +256,11 @@ button{font:inherit;color:inherit;border:0;cursor:pointer;touch-action:manipulat
     <p class="small" id="detail" style="text-align:center;min-height:1.5em;margin:10px 0 0"></p>
   </div>
   <div class="card"><h3>Needs more practice</h3><div class="chips" id="needs" style="justify-content:flex-start"></div></div>
+  <div class="card"><h3>Practice log</h3>
+    <p class="small" id="loginfo" style="margin:0 0 10px"></p>
+    <div class="row" style="justify-content:flex-start"><button class="pill" id="copy14">📋 Copy last 14 days</button><button class="pill" id="copyall">📋 Copy everything</button></div>
+    <p class="small" id="copymsg" style="min-height:1.4em;margin:8px 0 0"></p>
+    <textarea id="logbox" readonly style="display:none;width:100%;height:160px;font:12px ui-monospace,monospace;user-select:text;-webkit-user-select:text"></textarea></div>
   <div class="card">
     <h3>Settings</h3>
     <div class="row" style="justify-content:flex-start">
@@ -253,7 +268,7 @@ button{font:inherit;color:inherit;border:0;cursor:pointer;touch-action:manipulat
       <span class="seg" id="pace"><button data-p="standard">20 · 15 · 10 · 5 s</button><button data-p="gentle">30 · 20 · 12 · 8 s</button></span>
     </div>
     <p class="small">Each fact starts at the slowest timer. A correct answer moves it one step faster; a miss or time-out moves it one step slower. A fact counts as memorized after 3 correct answers in a row within the fastest time (5 or 8 seconds), whatever timer was showing. A slower answer or a miss restarts that count, and a retry straight after a miss doesn't count.</p>
-    <button class="pill danger" id="reset">Erase all progress</button>
+    <button class="pill danger" id="reset">Erase all progress and the log</button>
   </div>
 </section>
 
@@ -263,6 +278,14 @@ button{font:inherit;color:inherit;border:0;cursor:pointer;touch-action:manipulat
   <div class="book" id="bookgrid"></div>
 </section>
 
+<div id="guard" class="guard" hidden><div class="gbox">
+  <h3>Erase everything?</h3>
+  <p class="small">This deletes all progress and the practice log on this device and cannot be undone. Grown-ups only: answer both to continue.</p>
+  <label>Your year of birth <input id="gyear" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="4"></label>
+  <label><span id="gq"></span> = <input id="gans" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="4"></label>
+  <p class="small" id="gerr"></p>
+  <div class="grow"><button id="gcancel">Cancel</button><button id="gok">Erase everything</button></div>
+</div></div>
 <canvas id="fx"></canvas>
 
 <script>
@@ -282,6 +305,26 @@ try{const d=JSON.parse(localStorage.getItem(KEY));if(d&&d.facts)D=Object.assign(
 if(!LIMITS[D.pace])D.pace='standard';
 if(!['+','-','x','/','all'].includes(D.mode))D.mode='+';
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(D))}catch(e){}};
+
+/* ---------- play log: one row per answer, kept on this device only ---------- */
+const LOGKEY='sparkleSums.log.v1',LOGMAX=6000;
+let LOG=[];
+try{const l=JSON.parse(localStorage.getItem(LOGKEY));if(Array.isArray(l))LOG=l}catch(e){}
+function logRow(r){
+  LOG.push(r);if(LOG.length>LOGMAX)LOG=LOG.slice(-LOGMAX);
+  try{localStorage.setItem(LOGKEY,JSON.stringify(LOG))}
+  catch(e){LOG=LOG.slice(-Math.floor(LOG.length/2));try{localStorage.setItem(LOGKEY,JSON.stringify(LOG))}catch(e2){}}   // storage full: keep the newer half
+}
+const stamp=t=>{const d=new Date(t),p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`};
+async function copyText(t){
+  try{await navigator.clipboard.writeText(t);return true}catch(e){}
+  try{const ta=document.createElement('textarea');ta.value=t;ta.style.cssText='position:fixed;top:0;left:0;opacity:0;user-select:text;-webkit-user-select:text';document.body.appendChild(ta);ta.focus();ta.select();const ok=document.execCommand('copy');ta.remove();return ok}catch(e){return false}
+}
+async function copyLog(days){
+  const since=days?Date.now()-days*864e5:0,rows=LOG.filter(r=>r[0]>=since),t=exportLog(rows),ok=await copyText(t),box=$('#logbox');
+  $('#copymsg').textContent=ok?`Copied ${rows.length} answers (${Math.max(1,Math.round(t.length/1024))} KB). Paste it into Claude or another assistant.`:'Could not copy automatically. The log is in the box below: tap in it, Select All, then Copy.';
+  box.style.display=ok?'none':'block';box.value=ok?'':t;
+}
 
 // Every fact, easiest first within each operation:
 //   +  1..20 + 1..20 (a<=b, shown either way round)      210 facts
@@ -527,7 +570,7 @@ function drawTimer(){
 }
 function startSprint(){
   audio();
-  G={q:buildSprint(),i:0,score:0,streak:0,best:0,first:0,base:0,mem:[],locked:true};
+  G={q:buildSprint(),i:0,score:0,streak:0,best:0,first:0,base:0,mem:[],locked:true,n:D.sprints+1};
   G.base=G.q.length;$('#score').textContent='0';show('game');next();
 }
 function dots(){$('#dots').innerHTML=G.q.map((e,i)=>`<i class="${e.r} ${i===G.i?'cur':''} ${e.retry?'re':''}"></i>`).join('')}
@@ -566,6 +609,7 @@ function hit(btn){
     if(rec.f>=3)nl=4;
   }
   rec.l=nl;rec.n++;rec.c++;rec.t=Math.round(used*10)/10;rec.last=Date.now();
+  logRow([Date.now(),G.n,D.mode,c.f.k,c.x+c.sym+c.y,c.sum,c.sum,'right',rec.t,timer.limit,old,nl,rec.f||0,c.e.retry?1:0,[...document.querySelectorAll('.ans')].map(b=>b.dataset.v).join('|')]);
   G.streak++;G.best=Math.max(G.best,G.streak);if(!c.e.retry)G.first++;
   const justMem=nl===4&&old<4;
   let pts=10+Math.round(10*frac)+(G.streak>=2?Math.min(G.streak,10)*2:0)+(justMem?50:0);
@@ -588,8 +632,9 @@ function hit(btn){
   after(dur);
 }
 function miss(btn){
-  const c=G.cur,rec=record(c.f.k);
+  const c=G.cur,rec=record(c.f.k),old=rec.l;
   rec.l=Math.max(0,rec.l-1);rec.f=0;rec.n++;rec.w++;rec.last=Date.now();save();
+  logRow([Date.now(),G.n,D.mode,c.f.k,c.x+c.sym+c.y,btn?btn.dataset.v:'',c.sum,btn?'wrong':'timeout',Math.round(Math.min(timer.limit,timer.limit-timer.left)*10)/10,timer.limit,old,rec.l,0,c.e.retry?1:0,[...document.querySelectorAll('.ans')].map(b=>b.dataset.v).join('|')]);
   G.streak=0;c.e.r='no';
   if(!c.e.retry)G.q.splice(Math.min(G.i+3,G.q.length),0,{f:c.f,retry:true,r:''});
   const ans=$('#eans');ans.textContent=c.sum;ans.className='told';
@@ -617,6 +662,34 @@ function endSprint(){
 }
 
 /* ================= progress ================= */
+
+const LOGNOTE='Every answer is recorded on this device only: the question, the choices, what was tapped, how long it took and the level before and after. Copy the log and paste it into Claude or another assistant to look for patterns.';
+const OPNAME={'+':'Addition','-':'Subtraction','x':'Multiplication','/':'Division'};
+function exportLog(rows){
+  const L=LIMITS[D.pace];
+  const state=Object.keys(OPNAME).map(o=>{const l=pool(o),seen=l.filter(f=>D.facts[f.k]).length,m=memCount(o);return `#   ${OPNAME[o]}: ${m} memorized, ${seen-m} in progress, ${l.length-seen} not started (of ${l.length})`});
+  const hard=FACTS.filter(f=>D.facts[f.k]&&D.facts[f.k].w>0).sort((a,b)=>D.facts[b.k].w-D.facts[a.k].w).slice(0,25).map(f=>{const r=D.facts[f.k];return `${f.k} (missed ${r.w}, right ${r.c}, level ${r.l})`});
+  return [
+    `# Sparkle Sums practice log. Exported ${stamp(Date.now())}. ${rows.length} answers`+(rows.length?`, ${stamp(rows[0][0])} to ${stamp(rows[rows.length-1][0])}.`:'.'),
+    '# A child practises arithmetic facts in sprints of about 10 multiple-choice questions (6 choices each) against a countdown timer.',
+    '# Facts: addition 1-20 + 1-20; subtraction a - b with 1 <= b <= a <= 20; multiplication 1-12 x 1-12; division (b x c) / b for b, c in 1-12.',
+    '# Columns:',
+    '#   time = local time of the answer; sprint = sprint number; mode = what the child chose to practise (+, -, x, / or all)',
+    '#   fact = the fact (for + and x the smaller number is written first); shown_as = how it appeared on screen',
+    '#   result = right, wrong (tapped a wrong choice) or timeout (the timer ran out; answer_given is then empty)',
+    '#   seconds_taken = time from the question appearing to the tap; timer_seconds = the time allowed for that question',
+    `#   level_before / level_after = the fact's level. Levels 0-3 give it a ${L[0]}, ${L[1]}, ${L[2]} or ${L[3]} second timer next time; level 4 = memorized`,
+    '#     a right answer raises the level (a fast one can skip steps); a wrong answer or timeout lowers it by one',
+    `#   fast_streak_after = right answers in a row within ${L[3]} seconds; 3 in a row makes the fact memorized`,
+    '#   is_retry = 1 when a missed fact is asked again later in the same sprint (retries do not count toward memorized)',
+    '#   choices = the six answers offered, in button order (top row left to right, then bottom row), separated by |',
+    '# Current state on this device:',...state,
+    `#   Sprints played: ${D.sprints}. Most-missed facts: ${hard.join('; ')||'none yet'}`,
+    'time,sprint,mode,fact,shown_as,answer_given,correct_answer,result,seconds_taken,timer_seconds,level_before,level_after,fast_streak_after,is_retry,choices',
+    ...rows.map(r=>[stamp(r[0]),...r.slice(1)].join(','))].join('\n');
+}
+function logInfo(){$('#loginfo').textContent=(LOG.length?`${LOG.length} answers logged since ${stamp(LOG[0][0]).slice(0,10)}. `:'Nothing logged yet. ')+LOGNOTE;$('#copymsg').textContent='';$('#logbox').style.display='none'}
+$('#copy14').onclick=()=>copyLog(14);$('#copyall').onclick=()=>copyLog(0);
 let selKey=null,PT='+';
 $('#ptabs').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;PT=b.dataset.t;selKey=null;$('#detail').textContent='';progress()});
 $('#modes').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;D.mode=b.dataset.m;save();home()});
@@ -637,6 +710,7 @@ function progress(){
   const needs=list.filter(f=>{const r=D.facts[f.k];return r&&r.w>0&&r.l<4}).sort((x,y)=>D.facts[y.k].w-D.facts[x.k].w||D.facts[x.k].l-D.facts[y.k].l).slice(0,18);
   $('#needs').innerHTML=needs.length?needs.map(f=>`<span class="chip">${say(f)} <span class="small">· missed ${D.facts[f.k].w}×</span></span>`).join(''):'<span class="small">Nothing yet — missed facts will show up here.</span>';
   document.querySelectorAll('#pace button').forEach(b=>b.classList.toggle('on',b.dataset.p===D.pace));
+  logInfo();
 }
 $('#grid').addEventListener('click',ev=>{
   const d=ev.target.closest('[data-k]');if(!d)return;
@@ -646,11 +720,17 @@ $('#grid').addEventListener('click',ev=>{
   $('#detail').textContent=`${say(FMAP[selKey])} = ${FMAP[selKey].ans} — `+(!r?'not tried yet':(r.l>=4?'memorized ★':`next timer ${lim(r.l)}s · fast answers in a row ${r.f||0}/3`)+` · right ${r.c} · missed ${r.w}`+(r.t?` · last correct answer took ${r.t}s`:''));
 });
 $('#pace').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;D.pace=b.dataset.p;save();progress()});
-let resetArm=0;
-$('#reset').addEventListener('click',ev=>{
-  if(Date.now()-resetArm<4000){const keep={pace:D.pace,mute:D.mute,mode:D.mode};D=Object.assign(blank(),keep);save();resetArm=0;ev.target.textContent='Erase all progress';selKey=null;$('#detail').textContent='';progress()}
-  else{resetArm=Date.now();ev.target.textContent='Tap again to erase everything';setTimeout(()=>{if(resetArm){resetArm=0;ev.target.textContent='Erase all progress'}},4000)}
-});
+function eraseAll(){D=Object.assign(blank(),{pace:D.pace,mute:D.mute,mode:D.mode});save();LOG=[];try{localStorage.removeItem(LOGKEY)}catch(e){}selKey=null;$('#detail').textContent='';progress()}
+// Erasing needs a grown-up: a plausible adult birth year and a sum a young child can't do in their head.
+let guardAns=0;
+function guardQuestion(){const a=rndi(13,29),b=rndi(6,9),c=rndi(11,49);guardAns=a*b-c;$('#gq').textContent=`${a} × ${b} − ${c}`;$('#gans').value=''}
+$('#reset').onclick=()=>{guardQuestion();$('#gyear').value='';$('#gerr').textContent='';$('#guard').hidden=false};
+$('#gcancel').onclick=()=>{$('#guard').hidden=true};
+$('#gok').onclick=()=>{
+  const y=$('#gyear').value.trim(),ans=$('#gans').value.trim(),age=new Date().getFullYear()-(+y);
+  if(!/^\d{4}$/.test(y)||!(age>10&&age<80)||ans===''||+ans!==guardAns){$('#gerr').textContent='That doesn\'t match, so nothing was erased. Here is a new question.';guardQuestion();return}
+  $('#guard').hidden=true;eraseAll();
+};
 function book(){
   $('#bookinfo').textContent=`${D.stickers.length} of ${STICKERS.length} stickers — finish a sprint to earn one, a perfect sprint earns two!`;
   $('#bookgrid').innerHTML=STICKERS.map(s=>D.stickers.includes(s)?`<div>${s}</div>`:'<div class="q">?</div>').join('');
