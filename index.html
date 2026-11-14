@@ -176,8 +176,9 @@ button{font:inherit;color:inherit;border:0;cursor:pointer;touch-action:manipulat
 .praise{position:fixed;left:0;right:0;top:13%;text-align:center;font-weight:900;pointer-events:none;z-index:30;line-height:1.05;padding:0 4vw;
   text-shadow:3px 3px 0 #fff,-3px 3px 0 #fff,3px -3px 0 #fff,-3px -3px 0 #fff,0 3px 0 #fff,0 -3px 0 #fff,3px 0 0 #fff,-3px 0 0 #fff,0 10px 22px rgba(122,17,80,.3);
   animation:var(--a) var(--d) both}
-.praise span{display:inline-block;white-space:pre}
-.praise.wave span{animation:letter .5s ease-in-out calc(var(--i)*45ms) 2}
+.praise span{display:inline-block}
+.praise .wd{white-space:nowrap}
+.praise.wave .wd span{animation:letter .5s ease-in-out calc(var(--i)*45ms) 2}
 @keyframes letter{50%{transform:translateY(-.35em) rotate(-8deg)}}
 @keyframes p-pop{0%{transform:scale(0);opacity:0}18%{transform:scale(1.25);opacity:1}28%{transform:scale(1)}80%{transform:scale(1);opacity:1}100%{transform:scale(1.3);opacity:0}}
 @keyframes p-spin{0%{transform:scale(0) rotate(-540deg);opacity:0}28%{transform:scale(1) rotate(0);opacity:1}80%{opacity:1}100%{transform:scale(.6) rotate(20deg);opacity:0}}
@@ -473,7 +474,11 @@ function praise(text,tier,pal,dur){
   d.style.setProperty('--a',pick(PANIM));d.style.setProperty('--d',dur+'ms');
   d.style.fontSize=`clamp(${22+tier*7}px,${5+tier*2.2}vmin,${50+tier*20}px)`;
   const cols=pal.filter(c=>c!=='#ffffff'&&c!=='#fff3a0'&&c!=='#f9f871'),one=tier<3?pick(cols):null;
-  [...text].forEach((ch,i)=>{const s=document.createElement('span');s.textContent=ch;s.style.color=one||cols[i%cols.length];s.style.setProperty('--i',i);d.appendChild(s)});
+  let li=0;text.split(' ').forEach((wd,k)=>{   // letters are grouped per word so a long phrase wraps between words
+    if(k)d.appendChild(document.createTextNode(' '));
+    const w=document.createElement('span');w.className='wd';
+    [...wd].forEach(ch=>{const s=document.createElement('span');s.textContent=ch;s.style.color=one||cols[li%cols.length];s.style.setProperty('--i',li++);w.appendChild(s)});
+    d.appendChild(w)});
   document.body.appendChild(d);setTimeout(()=>d.remove(),dur+50);
 }
 // tier 1 (nice) .. 5 (over the top). Mixes random effects, palette, emoji set, wording, word animation and melody.
