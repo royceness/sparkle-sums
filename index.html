@@ -147,7 +147,7 @@ button{font:inherit;color:inherit;border:0;cursor:pointer;touch-action:manipulat
 .card{background:rgba(255,255,255,.72);border-radius:24px;padding:16px;margin:8px 0;width:100%;max-width:860px}
 .card h3{margin:0 0 8px;font-size:clamp(17px,2.8vmin,24px)}
 .small{font-size:clamp(13px,2.1vmin,18px);font-weight:700;line-height:1.45}
-.grid{--c:min(3.9vmin,32px);display:grid;grid-template-columns:repeat(21,var(--c));gap:2px;justify-content:center;font-size:calc(var(--c)*.45)}
+.grid{--c:min(3.9vmin,32px);--n:21;display:grid;grid-template-columns:repeat(var(--n),var(--c));gap:2px;justify-content:center;font-size:calc(var(--c)*.45)}
 .grid div{width:var(--c);height:var(--c);border-radius:22%;display:flex;align-items:center;justify-content:center}
 .grid .h{font-weight:900;color:var(--deep)}
 .lv-{background:rgba(255,255,255,.75)}
@@ -160,6 +160,9 @@ button{font:inherit;color:inherit;border:0;cursor:pointer;touch-action:manipulat
 .seg{display:inline-flex;background:#fff;border-radius:99px;padding:4px}
 .seg button{background:none;border-radius:99px;padding:.4em 1em;font-size:clamp(13px,2.2vmin,18px)}
 .seg button.on{background:var(--pink);color:#fff}
+.seg.modes{box-shadow:0 4px 0 rgba(216,27,122,.25);flex-wrap:wrap;justify-content:center;border-radius:28px}
+.seg.modes button{font-size:clamp(15px,3vmin,26px);padding:.5em .9em}
+.grid .na{background:none}
 .danger{background:#fff;color:#c2134a;border:2px solid #ffb3c7}
 .book{display:grid;grid-template-columns:repeat(auto-fill,minmax(clamp(64px,13vmin,110px),1fr));gap:12px;width:100%;max-width:860px}
 .book div{aspect-ratio:1;border-radius:24%;background:rgba(255,255,255,.75);display:flex;align-items:center;justify-content:center;font-size:clamp(36px,8vmin,66px)}
@@ -191,8 +194,9 @@ button{font:inherit;color:inherit;border:0;cursor:pointer;touch-action:manipulat
 <section id="home" class="screen on">
   <h1 class="title">Sparkle Sums</h1>
   <div class="hero"><div class="rainbow"></div><div class="uni">🦄</div></div>
-  <div class="stats"><span>⭐ <b id="hstars">0</b></span><span>👑 <b id="hmem">0</b> / 210 memorized</span></div>
+  <div class="stats"><span>⭐ <b id="hstars">0</b></span><span>👑 <b id="hmem">0</b> / <b id="htotal">210</b> memorized</span></div>
   <div class="bar"><i id="hbar" style="width:0"></i></div>
+  <div class="seg modes" id="modes"><button data-m="+">➕ Adding</button><button data-m="-">➖ Taking away</button><button data-m="x">✖️ Times</button><button data-m="all">🌈 All</button></div>
   <button class="big-btn" id="play">Play ▶</button>
   <div class="row">
     <button class="pill" id="tobook">🎀 Stickers <b id="hstick">0</b></button>
@@ -209,7 +213,7 @@ button{font:inherit;color:inherit;border:0;cursor:pointer;touch-action:manipulat
   </div>
   <div class="timer"><div class="track"></div><div id="tfill"></div><div id="trun">🦄</div><div id="tnum">20</div></div>
   <div id="streak"></div>
-  <div class="eq" id="eq"><span id="ea">5</span><span class="op">+</span><span id="eb">5</span><span class="op">=</span><span id="eans">?</span></div>
+  <div class="eq" id="eq"><span id="ea">5</span><span class="op" id="eop">+</span><span id="eb">5</span><span class="op">=</span><span id="eans">?</span></div>
   <div id="mem"></div>
   <div id="msg"></div>
   <div class="answers" id="answers"></div>
@@ -229,9 +233,10 @@ button{font:inherit;color:inherit;border:0;cursor:pointer;touch-action:manipulat
 
 <section id="prog" class="screen scroll">
   <div class="top"><button class="round back">←</button><h2>Progress</h2><span style="width:2.4em"></span></div>
+  <div class="seg" id="ptabs"><button data-t="+">➕ Adding</button><button data-t="-">➖ Taking away</button><button data-t="x">✖️ Times</button></div>
   <div class="card"><h3 id="psummary"></h3><div class="bar" style="width:100%"><i id="pbar" style="width:0"></i></div></div>
   <div class="card">
-    <h3>Every addition fact (tap a square)</h3>
+    <h3 id="gridtitle">Every addition fact (tap a square)</h3>
     <div class="grid" id="grid"></div>
     <div class="legend small" id="legend"></div>
     <p class="small" id="detail" style="text-align:center;min-height:1.5em;margin:10px 0 0"></p>
@@ -267,25 +272,43 @@ const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(M
 const KEY='sparkleSums.v1';
 const LIMITS={standard:[20,15,10,5],gentle:[30,20,12,8]};
 const STICKERS=['🦄','🌈','🦋','🐱','🐶','🐰','🦊','🐼','🐨','🐯','🦁','🐸','🐧','🦉','🐬','🐳','🐙','🦩','🦚','🐝','🐞','🐢','🦕','🐉','🧚','🧜‍♀️','👑','💎','🪄','🔮','🍭','🧁','🍩','🍓','🍉','🍦','🌸','🌻','🌷','🍄','⭐','🌙','🪐','🚀','🎈','🎀','🎠','🎡','🏰','💖','🎨','🎵','🛼','🧸','🪁','🌺','🐥','🦦','🦔','🐿️'];
-const blank=()=>({facts:{},stars:0,sprints:0,stickers:[],pace:'standard',mute:false});
+const blank=()=>({facts:{},stars:0,sprints:0,stickers:[],pace:'standard',mute:false,mode:'+'});
 let D=blank();
 try{const d=JSON.parse(localStorage.getItem(KEY));if(d&&d.facts)D=Object.assign(blank(),d)}catch(e){}
 if(!LIMITS[D.pace])D.pace='standard';
+if(!['+','-','x','all'].includes(D.mode))D.mode='+';
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(D))}catch(e){}};
 
-// All 210 facts (a<=b), easiest first.
+// Every fact, easiest first within each operation:
+//   +  1..20 + 1..20 (a<=b, shown either way round)      210 facts
+//   -  a - b for 1 <= b <= a <= 20 (never negative)       210 facts
+//   x  1..12 x 1..12 (a<=b, shown either way round)        78 facts
+const SYM={'+':'+','-':'−','x':'×'};
 function diff(a,b){let d=a+b+(b>10?10:0)+(a>10?10:0);if(a%10&&b%10&&(a%10)+(b%10)>=10)d+=8;if(a===b)d-=4;if(a===1)d-=3;if(a===2)d-=1;if(a===10||b===10)d-=5;return d}
-const FACTS=[];for(let a=1;a<=20;a++)for(let b=a;b<=20;b++)FACTS.push({a,b,k:a+'+'+b,d:diff(a,b)});
+function diffSub(a,b){let d=a+b*.5+(a>10?10:0)+(b>10?6:0);if(b%10>a%10)d+=8;if(b===1)d-=3;if(a===b)d-=4;if(b===a-1)d-=2;if(b===10)d-=4;return d}
+const TRANK={1:0,2:1,10:2,5:3,11:4,3:5,4:6,9:7,6:8,7:9,8:10,12:11};
+function diffMul(a,b){const x=TRANK[a],y=TRANK[b];return Math.min(x,y)*3+Math.max(x,y)}
+const FACTS=[];
+for(let a=1;a<=20;a++)for(let b=a;b<=20;b++)FACTS.push({op:'+',a,b,k:a+'+'+b,ans:a+b,d:diff(a,b)});
+for(let a=1;a<=20;a++)for(let b=1;b<=a;b++)FACTS.push({op:'-',a,b,k:a+'-'+b,ans:a-b,d:diffSub(a,b)});
+for(let a=1;a<=12;a++)for(let b=a;b<=12;b++)FACTS.push({op:'x',a,b,k:a+'x'+b,ans:a*b,d:diffMul(a,b)});
 FACTS.sort((x,y)=>x.d-y.d||x.b-y.b);
+const FMAP={};FACTS.forEach(f=>FMAP[f.k]=f);
+const say=f=>`${f.a} ${SYM[f.op]} ${f.b}`;
 const lim=l=>LIMITS[D.pace][Math.min(l,3)];
-const memCount=()=>FACTS.filter(f=>D.facts[f.k]&&D.facts[f.k].l>=4).length;
+const pool=m=>FACTS.filter(f=>m==='all'||f.op===m);
+const memCount=m=>pool(m).filter(f=>D.facts[f.k]&&D.facts[f.k].l>=4).length;
 
 function buildSprint(){
-  const N=10,last=f=>D.facts[f.k].last;
-  const seen=FACTS.filter(f=>D.facts[f.k]);
+  const N=10,last=f=>D.facts[f.k].last,list=pool(D.mode);
+  const seen=list.filter(f=>D.facts[f.k]);
   const learning=seen.filter(f=>D.facts[f.k].l<4).sort((x,y)=>last(x)-last(y));
   const mastered=seen.filter(f=>D.facts[f.k].l>=4).sort((x,y)=>last(x)-last(y));
-  const unseen=FACTS.filter(f=>!D.facts[f.k]);
+  let unseen=list.filter(f=>!D.facts[f.k]);
+  if(D.mode==='all'){   // take turns between the three operations when introducing new facts
+    const by=['+','-','x'].map(o=>unseen.filter(f=>f.op===o));unseen=[];
+    while(by.some(a=>a.length))by.forEach(a=>{if(a.length)unseen.push(a.shift())});
+  }
   const rev=mastered.splice(0,Math.min(2,mastered.length));
   const nNew=learning.length>=12?0:Math.min(unseen.length,Math.max(3,N-rev.length-learning.length));
   const out=[...rev,...unseen.splice(0,nNew)];
@@ -293,11 +316,12 @@ function buildSprint(){
   for(const p of [unseen,learning,mastered])while(out.length<N&&p.length)out.push(p.shift());
   return shuffle(out).map(f=>({f,retry:false,r:''}));
 }
-function options(sum){
+function options(f){
+  const sum=f.ans,offs=[...new Set(f.op==='x'?[f.a,f.b,1,2,10,3,4,5]:[1,2,3,4,5,10])];   // times tables: favour neighbours in the table
   // Pick how many wrong answers are smaller than the right one at random (so the right answer is as likely to be
   // the biggest number as the smallest), favour near misses, then put the buttons in random order.
-  const pool=s=>[1,2,3,4,5,10].map(d=>({v:sum+s*d,w:(d===10?4:d)*Math.random()})).filter(o=>o.v>=1).sort((x,y)=>x.w-y.w).map(o=>o.v);
-  const low=pool(-1),high=pool(1),nLow=Math.min(rndi(0,5),low.length);
+  const cand=s=>offs.map((d,i)=>({v:sum+s*d,w:(i+1)*Math.random()})).filter(o=>o.v>=0).sort((x,y)=>x.w-y.w).map(o=>o.v);
+  const low=cand(-1),high=cand(1),nLow=Math.min(rndi(0,5),low.length);
   return shuffle([sum,...low.slice(0,nLow),...high.slice(0,5-nLow)]);
 }
 
@@ -467,8 +491,9 @@ function celebrate(tier,o){
 /* ================= screens ================= */
 function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id));if(id==='home')home()}
 function home(){
-  const m=memCount();
-  $('#hstars').textContent=D.stars.toLocaleString();$('#hmem').textContent=m;$('#hbar').style.width=(m/210*100)+'%';
+  const m=memCount(D.mode),tot=pool(D.mode).length;
+  $('#hstars').textContent=D.stars.toLocaleString();$('#hmem').textContent=m;$('#htotal').textContent=tot;$('#hbar').style.width=(m/tot*100)+'%';
+  document.querySelectorAll('#modes button').forEach(b=>b.classList.toggle('on',b.dataset.m===D.mode));
   $('#hstick').textContent=D.stickers.length;$('#mute').textContent=D.mute?'🔇 Sound off':'🔊 Sound on';
 }
 
@@ -499,16 +524,16 @@ function dots(){$('#dots').innerHTML=G.q.map((e,i)=>`<i class="${e.r} ${i===G.i?
 function memIcons(r){const f=r?Math.min(3,r.f||0):0;$('#mem').textContent=r&&r.l>=4?'👑 Memorized!':'⚡'.repeat(f)+'🤍'.repeat(3-f)}
 function next(){
   if(G.i>=G.q.length)return endSprint();
-  const e=G.q[G.i],f=e.f,rec=D.facts[f.k],lvl=rec?rec.l:0,flip=Math.random()<.5;
-  G.cur={e,f,x:flip?f.b:f.a,y:flip?f.a:f.b,sum:f.a+f.b};
-  $('#ea').textContent=G.cur.x;$('#eb').textContent=G.cur.y;
+  const e=G.q[G.i],f=e.f,rec=D.facts[f.k],lvl=rec?rec.l:0,flip=f.op!=='-'&&Math.random()<.5;
+  G.cur={e,f,x:flip?f.b:f.a,y:flip?f.a:f.b,sum:f.ans,sym:SYM[f.op]};
+  $('#ea').textContent=G.cur.x;$('#eb').textContent=G.cur.y;$('#eop').textContent=G.cur.sym;
   const ans=$('#eans');ans.textContent='?';ans.className='';
   const eq=$('#eq');eq.classList.remove('in');void eq.offsetWidth;eq.classList.add('in');
   $('#msg').textContent=e.retry?'Let\'s try this one again! 💪':'';
   $('#streak').textContent=G.streak>=2?`🔥 ${G.streak} in a row!`:'';
   memIcons(rec);dots();
   const cols=shuffle(RAINBOW),box=$('#answers');box.innerHTML='';
-  options(G.cur.sum).forEach((v,i)=>{const b=document.createElement('button');b.className='ans';b.textContent=v;b.dataset.v=v;b.style.setProperty('--c',cols[i]);box.appendChild(b)});
+  options(f).forEach((v,i)=>{const b=document.createElement('button');b.className='ans';b.textContent=v;b.dataset.v=v;b.style.setProperty('--c',cols[i]);box.appendChild(b)});
   G.locked=false;startTimer(lim(lvl));
 }
 $('#answers').addEventListener('click',ev=>{
@@ -547,7 +572,7 @@ function hit(btn){
   const pl=document.createElement('span');pl.className='plus';pl.textContent='+'+pts;$('.scorebox').appendChild(pl);setTimeout(()=>pl.remove(),1150);
   memIcons(rec);dots();
   $('#streak').textContent=G.streak>=2?`🔥 ${G.streak} in a row!`:'';
-  $('#msg').textContent=justMem?`You memorized ${c.x} + ${c.y} = ${c.sum}! 👑`:fast&&old<4?`Super fast! ⚡ ${rec.f} of 3`:'';
+  $('#msg').textContent=justMem?`You memorized ${c.x} ${c.sym} ${c.y} = ${c.sum}! 👑`:fast&&old<4?`Super fast! ⚡ ${rec.f} of 3`:'';
   const r=btn.getBoundingClientRect(),dur=[0,1000,1300,1700,2400,3100][tier];
   celebrate(tier,{x:r.left+r.width/2,y:r.top+r.height/2,text,dur:Math.min(dur,2200)});
   after(dur);
@@ -560,7 +585,7 @@ function miss(btn){
   const ans=$('#eans');ans.textContent=c.sum;ans.className='told';
   let good=null;document.querySelectorAll('.ans').forEach(b=>{if(+b.dataset.v===c.sum){b.classList.add('reveal');good=b}else b.classList.add(b===btn?'wrong':'dim')});
   $('#streak').textContent='';memIcons(rec);dots();
-  $('#msg').textContent=(btn?pick(['So close!','Good try!','Almost!','Nice try!','Oopsie-daisy!']):'Time\'s up — no worries!')+` ${c.x} + ${c.y} = ${c.sum} `+pick(['💗','🌈','🦄','✨']);
+  $('#msg').textContent=(btn?pick(['So close!','Good try!','Almost!','Nice try!','Oopsie-daisy!']):'Time\'s up — no worries!')+` ${c.x} ${c.sym} ${c.y} = ${c.sum} `+pick(['💗','🌈','🦄','✨']);
   aww();
   if(good){const r=good.getBoundingClientRect();for(let i=0;i<6;i++)P({x:r.left+r.width/2+rnd(-40,40),y:r.top+20,vx:rnd(-40,40),vy:rnd(-160,-260),g:-20,shape:'emoji',e:pick(['💗','💖','✨']),size:rnd(24,40),rot:0,vr:0,sway:40,delay:i*.12,max:1.6})}
   after(2900);
@@ -573,7 +598,7 @@ function endSprint(){
   $('#endtitle').textContent=perfect?'PERFECT SPRINT!':stars===3?'Amazing sprint!':stars===2?'Great job!':'Good practice!';
   $('#endstars').innerHTML=[1,2,3].map(i=>`<span class="${i>stars?'off':''}">⭐</span>`).join('');
   $('#endinfo').innerHTML=`You got <b>${g.first} of ${g.base}</b> on the first try!<br>⭐ +${g.score} points${g.best>=3?` &nbsp;·&nbsp; 🔥 best streak ${g.best}`:''}`+(stars===1?'<br>Every try makes your brain stronger! 💪':'');
-  $('#endchips').innerHTML=g.mem.map(f=>`<span class="chip gold">👑 ${f.a} + ${f.b} = ${f.a+f.b}</span>`).join('');
+  $('#endchips').innerHTML=g.mem.map(f=>`<span class="chip gold">👑 ${say(f)} = ${f.ans}</span>`).join('');
   $('#newsticker').innerHTML=got.length?`New sticker${got.length>1?'s':''}! ${got.map(s=>`<b>${s}</b>`).join(' ')}`:'You collected every sticker! 🎉';
   show('end');
   const tier=perfect?5:stars===3?5:stars===2?4:acc>=.3?3:2;
@@ -582,18 +607,25 @@ function endSprint(){
 }
 
 /* ================= progress ================= */
-let selKey=null;
+let selKey=null,PT='+';
+$('#ptabs').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;PT=b.dataset.t;selKey=null;$('#detail').textContent='';progress()});
+$('#modes').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;D.mode=b.dataset.m;save();home()});
 function progress(){
-  const L=LIMITS[D.pace],m=memCount(),seen=Object.keys(D.facts).length;
-  $('#psummary').textContent=`👑 ${m} memorized · 🌱 ${seen-m} learning · ${210-seen} not started · ${D.sprints} sprints played`;
-  $('#pbar').style.width=(m/210*100)+'%';
-  let h='<div></div>';for(let b=1;b<=20;b++)h+=`<div class="h">${b}</div>`;
-  for(let a=1;a<=20;a++){h+=`<div class="h">${a}</div>`;
-    for(let b=1;b<=20;b++){const k=Math.min(a,b)+'+'+Math.max(a,b),r=D.facts[k];h+=`<div class="lv${r?r.l:'-'}${k===selKey?' sel':''}" data-k="${k}" data-a="${a}" data-b="${b}">${r&&r.l>=4?'★':''}</div>`}}
-  $('#grid').innerHTML=h;
+  const L=LIMITS[D.pace],list=pool(PT),tot=list.length,m=memCount(PT),seen=list.filter(f=>D.facts[f.k]).length,n=PT==='x'?12:20;
+  document.querySelectorAll('#ptabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===PT));
+  $('#psummary').textContent=`👑 ${m} memorized · 🌱 ${seen-m} learning · ${tot-seen} not started · ${D.sprints} sprints played`;
+  $('#pbar').style.width=(m/tot*100)+'%';
+  $('#gridtitle').textContent=PT==='-'?'Every subtraction fact: row − column (tap a square)':PT==='x'?'Every times-table fact (tap a square)':'Every addition fact (tap a square)';
+  const g=$('#grid');g.style.setProperty('--n',n+1);g.style.setProperty('--c',n===12?'min(6.2vmin,50px)':'min(3.9vmin,32px)');
+  let h='<div></div>';for(let b=1;b<=n;b++)h+=`<div class="h">${b}</div>`;
+  for(let a=1;a<=n;a++){h+=`<div class="h">${a}</div>`;
+    for(let b=1;b<=n;b++){
+      const k=PT==='-'?(b<=a?a+'-'+b:null):Math.min(a,b)+PT+Math.max(a,b),r=D.facts[k];
+      h+=k?`<div class="lv${r?r.l:'-'}${k===selKey?' sel':''}" data-k="${k}" data-a="${a}" data-b="${b}">${r&&r.l>=4?'★':''}</div>`:'<div class="na"></div>'}}
+  g.innerHTML=h;
   $('#legend').innerHTML=[['-','Not tried'],[0,L[0]+'s timer'],[1,L[1]+'s'],[2,L[2]+'s'],[3,L[3]+'s'],[4,'Memorized ★']].map(([l,t])=>`<span><i class="lv${l}"></i>${t}</span>`).join('');
-  const needs=FACTS.filter(f=>{const r=D.facts[f.k];return r&&r.w>0&&r.l<4}).sort((x,y)=>D.facts[y.k].w-D.facts[x.k].w||D.facts[x.k].l-D.facts[y.k].l).slice(0,18);
-  $('#needs').innerHTML=needs.length?needs.map(f=>`<span class="chip">${f.a} + ${f.b} <span class="small">· missed ${D.facts[f.k].w}×</span></span>`).join(''):'<span class="small">Nothing yet — missed facts will show up here.</span>';
+  const needs=list.filter(f=>{const r=D.facts[f.k];return r&&r.w>0&&r.l<4}).sort((x,y)=>D.facts[y.k].w-D.facts[x.k].w||D.facts[x.k].l-D.facts[y.k].l).slice(0,18);
+  $('#needs').innerHTML=needs.length?needs.map(f=>`<span class="chip">${say(f)} <span class="small">· missed ${D.facts[f.k].w}×</span></span>`).join(''):'<span class="small">Nothing yet — missed facts will show up here.</span>';
   document.querySelectorAll('#pace button').forEach(b=>b.classList.toggle('on',b.dataset.p===D.pace));
 }
 $('#grid').addEventListener('click',ev=>{
@@ -601,12 +633,12 @@ $('#grid').addEventListener('click',ev=>{
   const r=D.facts[d.dataset.k],a=+d.dataset.a,b=+d.dataset.b;selKey=d.dataset.k;
   document.querySelectorAll('#grid .sel').forEach(x=>x.classList.remove('sel'));
   document.querySelectorAll(`#grid [data-k="${selKey}"]`).forEach(x=>x.classList.add('sel'));
-  $('#detail').textContent=`${a} + ${b} = ${a+b} — `+(!r?'not tried yet':(r.l>=4?'memorized ★':`next timer ${lim(r.l)}s · fast answers in a row ${r.f||0}/3`)+` · right ${r.c} · missed ${r.w}`+(r.t?` · last correct answer took ${r.t}s`:''));
+  $('#detail').textContent=`${a} ${SYM[PT]} ${b} = ${FMAP[selKey].ans} — `+(!r?'not tried yet':(r.l>=4?'memorized ★':`next timer ${lim(r.l)}s · fast answers in a row ${r.f||0}/3`)+` · right ${r.c} · missed ${r.w}`+(r.t?` · last correct answer took ${r.t}s`:''));
 });
 $('#pace').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;D.pace=b.dataset.p;save();progress()});
 let resetArm=0;
 $('#reset').addEventListener('click',ev=>{
-  if(Date.now()-resetArm<4000){const keep={pace:D.pace,mute:D.mute};D=Object.assign(blank(),keep);save();resetArm=0;ev.target.textContent='Erase all progress';selKey=null;$('#detail').textContent='';progress()}
+  if(Date.now()-resetArm<4000){const keep={pace:D.pace,mute:D.mute,mode:D.mode};D=Object.assign(blank(),keep);save();resetArm=0;ev.target.textContent='Erase all progress';selKey=null;$('#detail').textContent='';progress()}
   else{resetArm=Date.now();ev.target.textContent='Tap again to erase everything';setTimeout(()=>{if(resetArm){resetArm=0;ev.target.textContent='Erase all progress'}},4000)}
 });
 function book(){
@@ -618,7 +650,7 @@ function book(){
 $('#play').onclick=startSprint;$('#again').onclick=startSprint;
 $('#endhome').onclick=()=>show('home');
 $('#quit').onclick=()=>{G=null;timer.on=false;show('home')};
-$('#toprog').onclick=()=>{progress();show('prog')};
+$('#toprog').onclick=()=>{PT=D.mode==='all'?'+':D.mode;selKey=null;$('#detail').textContent='';progress();show('prog')};
 $('#tobook').onclick=()=>{book();show('book')};
 document.querySelectorAll('.back').forEach(b=>b.onclick=()=>show('home'));
 $('#mute').onclick=()=>{D.mute=!D.mute;save();home();if(!D.mute)chime(1)};
