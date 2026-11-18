@@ -4,6 +4,12 @@ A unicorn-and-rainbow game for memorizing arithmetic facts, made for a tablet.
 
 **Play it: https://royceness.github.io/sparkle-sums/**
 
+![The Sparkle Sums home screen, with a unicorn under a rainbow and buttons for addition, subtraction, multiplication, division and all](screenshots/home.jpg)
+
+| Progress | Sticker book |
+|---|---|
+| ![The progress screen: a grid of every addition fact, coloured by how well it is known](screenshots/progress.jpg) | ![The sticker book, with earned stickers shown and the rest as question marks](screenshots/stickers.jpg) |
+
 ## What it does
 
 A question appears with six possible answers and a countdown timer. The child taps the right one. Questions come in sprints of about ten, with points, streaks, stickers and celebrations that get bigger the better they do.
